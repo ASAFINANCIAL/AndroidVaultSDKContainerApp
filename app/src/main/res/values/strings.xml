@@ -1,0 +1,4 @@
+<resources>
+    <string name="app_name">ASAVaultSDKContainer</string>
+    <string name="open_asa_vault_sdk">Open Asa Vault App</string>
+</resources>
