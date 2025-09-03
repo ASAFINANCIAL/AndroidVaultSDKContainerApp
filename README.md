@@ -89,6 +89,18 @@ dependencies {
     implementation("com.facebook.fresco:fresco:3.4.0")
     implementation("com.facebook.fresco:animated-gif:3.6.0")
     
+    // Media3 dependencies for video/audio support
+    implementation("androidx.media3:media3-exoplayer:1.4.1")
+    implementation("androidx.media3:media3-ui:1.4.1")
+    implementation("androidx.media3:media3-common:1.4.1")
+    implementation("androidx.media3:media3-datasource-okhttp:1.4.1")
+    implementation("androidx.media3:media3-session:1.4.1")
+    implementation("androidx.media3:media3-datasource:1.4.1")
+    implementation("com.squareup.okhttp3:okhttp:4.12.0")
+    
+    // CRITICAL: Add this to fix the NoSuchMethodError
+    implementation("androidx.activity:activity-ktx:1.9.2")
+    
     // Firebase dependencies for react-native-firebase support
     implementation(platform("com.google.firebase:firebase-bom:33.7.0"))
     implementation("com.google.firebase:firebase-dynamic-links")

@@ -77,5 +77,16 @@ dependencies {
     implementation("com.google.firebase:firebase-firestore")
     implementation ("com.google.firebase:firebase-config-ktx")
 
+    implementation("androidx.media3:media3-exoplayer:1.4.1")
+    implementation("androidx.media3:media3-ui:1.4.1")
+    implementation("androidx.media3:media3-common:1.4.1")
+    implementation("androidx.media3:media3-datasource-okhttp:1.4.1")
+    implementation("androidx.media3:media3-session:1.4.1")
+    implementation("androidx.media3:media3-datasource:1.4.1")
+    implementation("com.squareup.okhttp3:okhttp:4.12.0")
+
+    // CRITICAL: Add this to fix the NoSuchMethodError
+    implementation 'androidx.activity:activity-ktx:1.9.2'
+
 
 }
