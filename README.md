@@ -507,7 +507,8 @@ Add the AsaVaultActivity to your `AndroidManifest.xml`:
     <activity
         android:name=".AsaVaultActivity"
         android:launchMode="singleTask"
-        android:exported="true">
+        android:exported="true"
+        android:configChanges="orientation|screenSize|keyboardHidden|screenLayout|smallestScreenSize|uiMode">
     </activity>
     
 </application>
