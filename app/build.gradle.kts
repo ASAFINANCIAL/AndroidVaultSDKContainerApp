@@ -86,7 +86,7 @@ dependencies {
     implementation("com.squareup.okhttp3:okhttp:4.12.0")
 
     // CRITICAL: Add this to fix the NoSuchMethodError
-    implementation 'androidx.activity:activity-ktx:1.9.2'
+    implementation("androidx.activity:activity-ktx:1.9.2")
 
 
 }
