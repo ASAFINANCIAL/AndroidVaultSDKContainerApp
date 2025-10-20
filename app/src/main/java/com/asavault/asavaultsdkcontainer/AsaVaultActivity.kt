@@ -58,7 +58,7 @@ class AsaVaultActivity : AppCompatActivity(), PermissionAwareActivity {
                putInt("ApplicationCode", ApplicationCode_PLACEHOLDER)
                putString("AuthorizationKey", "AuthorizationKey_PLACEHOLDER")
            }
-           putBundle("ASA Vault SDKparamter", sdkParamsBundle)
+           putBundle("asavaultsdkparamter", sdkParamsBundle)
             val messageId = intent?.getStringExtra("messageId")
             Log.d("messageId", "onCreate: ")
             if (messageId != null) {
