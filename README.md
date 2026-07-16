@@ -1,10 +1,10 @@
 # ASA Vault SDK Container - Android Integration Guide
 
-This guide will help you integrate the ASA Vault SDK as an AAR file into your Android application. The SDK provides React Native functionality wrapped in a native Android AAR.
+This guide will help you integrate the ASA Vault SDK into your Android application. The SDK provides React Native functionality wrapped in a native Android library, delivered through ASA's private Maven repository (GitHub Packages).
 
 ## Table of Contents
 - [Prerequisites](#prerequisites)
-- [AAR Integration](#aar-integration)
+- [SDK Integration](#sdk-integration)
 - [Dependencies](#dependencies)
 - [Permissions](#permissions)
 - [Firebase Setup](#firebase-setup)
@@ -19,40 +19,47 @@ This guide will help you integrate the ASA Vault SDK as an AAR file into your An
 ### System Requirements
 - **Android Studio**: Latest stable version (recommended)
 - **Minimum SDK Version**: 24 (Android 7.0)
-- **Target SDK Version**: 35 (Android 14)
+- **Target SDK Version**: 35 (Android 15)
+- **Compile SDK Version**: 36
 - **Java Version**: 11 or higher
 - **Kotlin**: Latest stable version
 
 ### Development Environment
 - Ensure you have a working Android development environment
 - Make sure you can build and run Android applications successfully
+- A GitHub account with access to the `ASAFINANCIAL/android-asavaultsdk-maven` repository and a personal access token with the `read:packages` scope (provided/granted by ASA Vault developers)
 
-## AAR Integration
+## SDK Integration
 
-### Step 1: Copy AAR to Maven Local
+The SDK is delivered as a Maven artifact from ASA's private Maven repository hosted on GitHub Packages.
 
-1. **Locate your Maven Local directory:**
+### Step 1: Set Up Credentials
 
-   **macOS:**
-   ```bash
-   ~/.m2/repository/
-   ```
+The SDK is hosted on GitHub Packages, which never allows anonymous downloads of private packages — every developer machine (and CI runner) that builds the app must authenticate with:
 
-   **Windows:**
-   ```cmd
-   C:\Users\{YourUsername}\.m2\repository\
-   ```
+- **Username**: your own GitHub username
+- **Token**: a GitHub **personal access token (PAT)** with the `read:packages` scope — GitHub Packages does *not* accept account passwords
 
-2. **Copy the ASA Vault folder** provided by the ASA Vault developers to your Maven Local directory.
+#### Getting access
 
-3. **Verify the structure** - it should look like:
-   ```
-   ~/.m2/repository/com/asavault/nativeLibrary/{version}/
-   ```
+1. Request access to the `ASAFINANCIAL/android-asavaultsdk-maven` repository from the ASA Vault team (provide them the GitHub usernames that need it).
+2. Create the token on github.com: **Settings → Developer settings → Personal access tokens → Tokens (classic) → Generate new token (classic)**. Tick only the **`read:packages`** scope, set an expiry, generate, and copy the token immediately — it is shown only once. Use a *classic* token; GitHub Packages support for fine-grained tokens is unreliable.
+3. If the organization enforces SAML SSO, additionally authorize the token for it: on the token list page, click **Configure SSO → Authorize** next to the organization. Without this step the token gets `403` responses even though it is valid.
 
-### Step 2: Configure Maven Local Repository
+#### Storing the credentials
 
-Add `mavenLocal()` to your project's `settings.gradle.kts` file:
+Add them to your machine-level `~/.gradle/gradle.properties` (create the file if it doesn't exist). Never commit them to the project:
+
+```properties
+gpr.user=your-github-username
+gpr.token=ghp_xxxxxxxxxxxxxxxxxxxx
+```
+
+Alternatively, provide them as environment variables: `GH_PACKAGES_USER` and `GH_PACKAGES_TOKEN` — the recommended form for CI, stored as secrets. In GitHub Actions workflows running inside the same organization, the built-in `GITHUB_TOKEN` with `packages: read` permission can be used as the token instead of a long-lived PAT.
+
+### Step 2: Configure the Maven Repository
+
+Add the ASA Vault Maven repository to your project's `settings.gradle.kts` file:
 
 ```kotlin
 dependencyResolutionManagement {
@@ -60,10 +67,24 @@ dependencyResolutionManagement {
     repositories {
         google()
         mavenCentral()
-        mavenLocal() // Add this line
+        // ASAVault SDK private Maven registry (GitHub Packages).
+        maven {
+            name = "ASAVaultGitHubPackages"
+            url = uri("https://maven.pkg.github.com/ASAFINANCIAL/android-asavaultsdk-maven")
+            credentials {
+                username = providers.gradleProperty("gpr.user").orNull
+                    ?: System.getenv("GH_PACKAGES_USER") ?: ""
+                password = providers.gradleProperty("gpr.token").orNull
+                    ?: System.getenv("GH_PACKAGES_TOKEN") ?: ""
+            }
+        }
     }
 }
 ```
+
+### Alternative: Maven Local (offline / local development)
+
+If you received the SDK as a local Maven folder from ASA Vault developers instead, copy it into `~/.m2/repository/` (so the structure looks like `~/.m2/repository/com/asavault/nativelibrary/{version}/`) and add `mavenLocal()` to the `repositories` block above.
 
 ## Dependencies
 
@@ -71,9 +92,9 @@ Add the following dependencies to your `app/build.gradle.kts` file:
 
 ```kotlin
 dependencies {
-    // ASA Vault SDK Library
-    // Note: Use the same version name as the folder you copied to Maven Local
-    implementation("com.asavault:nativeLibrary:{version}")
+    // ASA Vault SDK Library (from the ASA Vault Maven repository)
+    // Note: Use the version communicated by ASA Vault developers
+    implementation("com.asavault:nativelibrary:{version}")
     
     // Lottie dependency for react-native-lottie support
     implementation("com.airbnb.android:lottie:6.3.0")
@@ -81,13 +102,12 @@ dependencies {
     // Biometric authentication
     implementation("androidx.biometric:biometric:1.1.0")
     
+    // Sentry dependency for @sentry/react-native support
+    implementation("io.sentry:sentry-android:8.32.0")
+    
     // Coil dependency for image loading (required by AsaVault SDK)
     implementation("io.coil-kt.coil3:coil:3.0.4")
     implementation("io.coil-kt.coil3:coil-compose:3.0.4")
-    
-    // Fresco dependencies for React Native image/gif support
-    implementation("com.facebook.fresco:fresco:3.4.0")
-    implementation("com.facebook.fresco:animated-gif:3.6.0")
     
     // Media3 dependencies for video/audio support
     implementation("androidx.media3:media3-exoplayer:1.4.1")
@@ -111,7 +131,7 @@ dependencies {
 }
 ```
 
-**Important:** Replace `{version}` with the actual version number that matches the folder name you copied to Maven Local.
+**Important:** Replace `{version}` with the actual version number published in the ASA Vault Maven repository (as communicated by ASA Vault developers).
 
 ## Permissions
 
@@ -214,7 +234,7 @@ plugins {
 
 dependencies {
     // Import the Firebase BoM
-    implementation(platform("com.google.firebase:firebase-bom:34.2.0"))
+    implementation(platform("com.google.firebase:firebase-bom:33.7.0"))
     
     // TODO: Add the dependencies for Firebase products you want to use
     // When using the BoM, don't specify versions in Firebase dependencies
@@ -250,7 +270,7 @@ plugins {
 
 dependencies {
     // Import the Firebase BoM
-    implementation platform('com.google.firebase:firebase-bom:34.2.0')
+    implementation platform('com.google.firebase:firebase-bom:33.7.0')
     
     // TODO: Add the dependencies for Firebase products you want to use
     // When using the BoM, don't specify versions in Firebase dependencies
@@ -284,7 +304,6 @@ import com.asavault.nativelibary.ReactNativeHostManagerNew
 import com.facebook.react.ReactNativeHost
 import com.facebook.react.ReactApplication
 import com.facebook.react.ReactHost
-import com.facebook.react.defaults.DefaultReactHost.getDefaultReactHost
 import com.google.firebase.FirebaseApp
 
 class YourApplicationClass : Application(), ReactApplication {
@@ -302,11 +321,12 @@ class YourApplicationClass : Application(), ReactApplication {
     }
     
     override val reactNativeHost: ReactNativeHost
-        get() = com.callstack.reactnativebrownfield.ReactNativeBrownfield.shared.reactNativeHost
-            ?: throw IllegalStateException("ReactNativeHost not initialized. Make sure ReactNativeHostManagerNew.initialize() was called.")
+        get() = throw UnsupportedOperationException(
+            "ReactNativeHost is not available with react-native-brownfield 2.x (bridgeless). Use reactHost instead."
+        )
 
     override val reactHost: ReactHost
-        get() = getDefaultReactHost(applicationContext, reactNativeHost)
+        get() = com.callstack.reactnativebrownfield.ReactNativeBrownfield.shared.reactHost
 }
 ```
 
@@ -402,8 +422,11 @@ class AsaVaultActivity : AppCompatActivity(), PermissionAwareActivity {
                 putInt("AsaFintechCode", AsaFintechCode_PLACEHOLDER)
                 putInt("ApplicationCode", ApplicationCode_PLACEHOLDER)
                 putString("AuthorizationKey", "AuthorizationKey_PLACEHOLDER")
+                putBoolean("SkipAuth", false)
+                // Set to true to enable verbose SDK logging during development
+                putBoolean("debugEnabled", false)
             }
-            putBundle("ASA Vault SDKparamter", sdkParamsBundle)
+            putBundle("asavaultsdkparamter", sdkParamsBundle)
             
             val messageId = intent?.getStringExtra("messageId")
             Log.d("messageId", "onCreate: ")
@@ -437,24 +460,16 @@ class AsaVaultActivity : AppCompatActivity(), PermissionAwareActivity {
     }
 
     private fun forwardInitialIntentToRN() {
-        val app = application as com.facebook.react.ReactApplication
-        val rim = app.reactNativeHost.reactInstanceManager
-
-        Log.d("forwardInitialIntentToRN", "forwardInitialIntentToRN: ${intent.data} ")
-        // If React context is already created, forward immediately…
-        if (rim.currentReactContext != null) {
-            rim.onNewIntent(intent)
-            return
-        }
-
-        // …otherwise, wait until it is ready, then forward once.
-        rim.addReactInstanceEventListener(object :
-            com.facebook.react.ReactInstanceManager.ReactInstanceEventListener {
-            override fun onReactContextInitialized(context: com.facebook.react.bridge.ReactContext) {
-                rim.onNewIntent(this@AsaVaultActivity.intent)
-                rim.removeReactInstanceEventListener(this)
+        try {
+            // Brownfield 2.x is bridgeless: forward intents to the ReactHost
+            // that renders the UI (reactNativeHost/reactInstanceManager no longer exist).
+            val reactHost = com.callstack.reactnativebrownfield.ReactNativeBrownfield.shared.reactHost
+            if (reactHost.currentReactContext != null) {
+                reactHost.onNewIntent(intent)
             }
-        })
+        } catch (e: Exception) {
+            Log.e("RNApp", "Failed to forward intent to RN", e)
+        }
     }
     
     override fun onNewIntent(intent: Intent) {
@@ -837,6 +852,27 @@ Use ASA Vault primarily through push notifications and deep links.
 
 The ASA Vault SDK provides a complete React Native experience within your Android app. Once launched, users will see the full ASA Vault interface with all its features and functionality.
 
----
+## Troubleshooting
 
-*Continue reading for Troubleshooting and other steps...*
+### `Could not resolve com.asavault:nativelibrary:{version}` / HTTP 401 or 403
+
+The private Maven repository rejected your credentials, or they were never picked up:
+- Verify `gpr.user` / `gpr.token` are set in `~/.gradle/gradle.properties` (or `GH_PACKAGES_USER` / `GH_PACKAGES_TOKEN` are exported in the environment Gradle runs in).
+- Verify the token has the `read:packages` scope and has not expired.
+- Verify your GitHub account has access to the `ASAFINANCIAL/android-asavaultsdk-maven` repository.
+
+### `Could not find com.asavault:nativelibrary:{version}`
+
+Credentials are fine, but the requested version does not exist in the repository. Check the version number against what ASA Vault developers communicated.
+
+### `NoSuchMethodError` at runtime
+
+Make sure `androidx.activity:activity-ktx:1.9.2` is in your dependencies (see [Dependencies](#dependencies)) — older transitive versions of `activity-ktx` cause this crash.
+
+### `ReactNativeHost is not available` / `UnsupportedOperationException`
+
+The SDK uses react-native-brownfield 2.x in bridgeless mode. Use `reactHost` (as shown in [Initialization](#initialization)) instead of `reactNativeHost` — the old `reactNativeHost` / `reactInstanceManager` APIs are no longer available.
+
+### SDK opens but configuration seems ignored
+
+Double-check the parameter bundle key: it must be exactly `asavaultsdkparamter` (note the spelling). A mistyped key fails silently.
