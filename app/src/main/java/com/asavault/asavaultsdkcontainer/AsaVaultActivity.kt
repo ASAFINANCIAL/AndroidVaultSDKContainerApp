@@ -85,24 +85,16 @@ class AsaVaultActivity : AppCompatActivity(), PermissionAwareActivity {
     }
 
     private fun forwardInitialIntentToRN() {
-        val app = application as com.facebook.react.ReactApplication
-        val rim = app.reactNativeHost.reactInstanceManager
-
-        Log.d("forwardInitialIntentToRN", "forwardInitialIntentToRN: ${intent.data} ")
-        // If React context is already created, forward immediately…
-        if (rim.currentReactContext != null) {
-            rim.onNewIntent(intent)
-            return
-        }
-
-        // …otherwise, wait until it is ready, then forward once.
-        rim.addReactInstanceEventListener(object :
-            com.facebook.react.ReactInstanceManager.ReactInstanceEventListener {
-            override fun onReactContextInitialized(context: com.facebook.react.bridge.ReactContext) {
-                rim.onNewIntent(this@AsaVaultActivity.intent)
-                rim.removeReactInstanceEventListener(this)
+        try {
+            // Brownfield 2.x is bridgeless: forward intents to the ReactHost
+            // that renders the UI (reactNativeHost/reactInstanceManager no longer exist).
+            val reactHost = com.callstack.reactnativebrownfield.ReactNativeBrownfield.shared.reactHost
+            if (reactHost.currentReactContext != null) {
+                reactHost.onNewIntent(intent)
             }
-        })
+        } catch (e: Exception) {
+            Log.e("RNApp", "Failed to forward intent to RN", e)
+        }
     }
     override fun onNewIntent(intent: Intent) {
         Log.d("RNApp", "onNewIntent: ${intent} , ${intent.data}")

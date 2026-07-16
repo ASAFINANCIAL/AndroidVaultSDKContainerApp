@@ -59,13 +59,15 @@ dependencies {
     debugImplementation(libs.androidx.ui.tooling)
     debugImplementation(libs.androidx.ui.test.manifest)
 
-    //   Asa Vault sdk Library
-    implementation("com.asavault:nativeLibrary:0.0.201-local")
+    //   Asa Vault sdk Library (from GitHub Packages)
+    implementation("com.asavault:nativelibrary:0.0.1-test")
     // Add Lottie dependency for react-native-lottie support
     implementation("com.airbnb.android:lottie:6.3.0")
     // Add biometric dependency for react-native-lottie support
     implementation("androidx.biometric:biometric:1.1.0")
 
+    // Add Sentry dependency for @sentry/react-native support
+    implementation("io.sentry:sentry-android:8.32.0")
     // Add Coil dependency for image loading (required by AsaVault SDK)
     implementation("io.coil-kt.coil3:coil:3.0.4")
     implementation("io.coil-kt.coil3:coil-compose:3.0.4")

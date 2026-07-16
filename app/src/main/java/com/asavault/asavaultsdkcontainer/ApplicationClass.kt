@@ -19,9 +19,10 @@ import com.google.firebase.FirebaseApp
 
     }
     override val reactNativeHost: ReactNativeHost
-        get() = com.callstack.reactnativebrownfield.ReactNativeBrownfield.shared.reactNativeHost
-            ?: throw IllegalStateException("ReactNativeHost not initialized. Make sure ReactNativeHostManagerNew.initialize() was called.")
+        get() = throw UnsupportedOperationException(
+            "ReactNativeHost is not available with react-native-brownfield 2.x (bridgeless). Use reactHost instead."
+        )
 
     override val reactHost: ReactHost
-        get() = getDefaultReactHost(applicationContext, reactNativeHost)
+        get() = com.callstack.reactnativebrownfield.ReactNativeBrownfield.shared.reactHost
 }
