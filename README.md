@@ -109,6 +109,14 @@ dependencies {
     implementation("io.coil-kt.coil3:coil:3.0.4")
     implementation("io.coil-kt.coil3:coil-compose:3.0.4")
     
+    // Fresco dependencies for React Native image support
+    // (animated-gif is required for GIF rendering inside the SDK)
+    implementation("com.facebook.fresco:fresco:3.4.0")
+    implementation("com.facebook.fresco:animated-gif:3.6.0")
+    
+    // AndroidX WebKit for the SDK's WebView flows (bank linking, etc.)
+    implementation("androidx.webkit:webkit:1.12.1")
+    
     // Media3 dependencies for video/audio support
     implementation("androidx.media3:media3-exoplayer:1.4.1")
     implementation("androidx.media3:media3-ui:1.4.1")
@@ -127,7 +135,6 @@ dependencies {
     implementation("com.google.firebase:firebase-analytics")
     implementation("com.google.firebase:firebase-messaging")
     implementation("com.google.firebase:firebase-firestore")
-    implementation("com.google.firebase:firebase-config-ktx")
 }
 ```
 
@@ -141,6 +148,10 @@ Add the following permissions to your `app/src/main/AndroidManifest.xml` file:
 <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
 <uses-permission android:name="android.permission.INTERNET" />
 <uses-permission android:name="android.permission.USE_BIOMETRIC" />
+
+<!-- Required on Android 13+ so the SDK can request notification permission
+     at runtime (push notifications) -->
+<uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
 
 <!-- Location permissions - choose based on your accuracy requirements -->
 <!-- Define ACCESS_FINE_LOCATION if you will use enableHighAccuracy=true -->
@@ -184,7 +195,8 @@ Add the following permissions to your `app/src/main/AndroidManifest.xml` file:
 ### Permission Usage Notes:
 - **Network permissions**: Required for API communication
 - **Biometric permission**: Required for fingerprint/face authentication features
-- **Location permissions**: Choose between FINE and COARSE based on your accuracy requirements
+- **Notification permission**: Required on Android 13+ (API 33) — without it declared, the SDK's runtime permission request is silently auto-denied and push notifications never work
+- **Location permissions**: Choose between FINE and COARSE based on your accuracy requirements. The SDK requests location at startup; if these are missing from the manifest the request is silently auto-denied
 
 ## Firebase Setup
 
@@ -372,7 +384,8 @@ import android.content.Intent
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat
 
-// Import that will be resolved once you install "nativelibary"
+// Imports that will be resolved once you install "nativelibary"
+import com.asavault.nativelibary.AsaVaultNativeModule
 import com.asavault.nativelibary.VaultAppActivity
 import com.facebook.react.modules.core.PermissionAwareActivity
 import com.facebook.react.modules.core.PermissionListener
@@ -410,7 +423,8 @@ class AsaVaultActivity : AppCompatActivity(), PermissionAwareActivity {
         val initialParams = Bundle().apply {
             // SDK Configuration - Dynamic Link Setup as nested object
             val dynamicLinkBundle = Bundle().apply {
-                putString("androidRootBundle", "com.asa.pal")
+                putString("androidRootBundle", "your.android.package.name")
+                putString("iosRootBundle", "your.ios.bundle.identifier")
                 putString("env", "QA")
             }
             putBundle("dynamicLinkSetup", dynamicLinkBundle)
@@ -425,6 +439,19 @@ class AsaVaultActivity : AppCompatActivity(), PermissionAwareActivity {
                 putBoolean("SkipAuth", false)
                 // Set to true to enable verbose SDK logging during development
                 putBoolean("debugEnabled", false)
+                
+                // Financial institution code (provided by ASA Vault developers)
+                putString("AsaFICode", "")
+                
+                // Optional: member pre-fill parameters. Pass them when your app
+                // already knows the member so the SDK can pre-populate the flows.
+                putString("MemberNumber", "")
+                putString("MemberPhone", "")
+                putString("MemberEmail", "")
+                putString("MemberAccountId", "")
+                putString("MemberFirstName", "")
+                putString("MemberLastName", "")
+                putString("MemberSSN", "")
             }
             putBundle("asavaultsdkparamter", sdkParamsBundle)
             
@@ -476,10 +503,14 @@ class AsaVaultActivity : AppCompatActivity(), PermissionAwareActivity {
         Log.d("RNApp", "onNewIntent: ${intent} , ${intent.data}")
         super.onNewIntent(intent)
 
-        setIntent(intent)
-        if (intent.getStringExtra("initialUrl") != null) {
-            recreateVaultView()
+        // Hand the URL to the SDK; it navigates internally. Do NOT recreate
+        // the vault view here — the running React Native instance handles it.
+        try {
+            AsaVaultNativeModule.shared?.handleUrlRequest(intent.data.toString())
+        } catch (e: Exception) {
+            Log.e("RNApp", "Error during URL validation", e)
         }
+
         forwardInitialIntentToRN()
     }
 
@@ -548,8 +579,11 @@ Add the AsaVaultActivity to your `AndroidManifest.xml`:
 - `AsaFintechCode`
 - `ApplicationCode`
 - `AuthorizationKey`
+- `AsaFICode`
 
 Do not hardcode these values. They should be replaced with the actual values provided by ASA Vault.
+
+The `Member*` parameters (`MemberNumber`, `MemberPhone`, `MemberEmail`, `MemberAccountId`, `MemberFirstName`, `MemberLastName`, `MemberSSN`) are optional pre-fill values sourced from your own app's user data.
 
 ### Step 4: Launch the Activity
 
